@@ -1,0 +1,10 @@
+{
+  "event_attended_count": 10,
+  "event_hosted_count": 3,
+  "user": {
+    "api_id": "usr-HOST1",
+    "username": "test_hosts",
+    "name": "Test Hosts",
+    "bio_short": "Synthetic test host"
+  }
+}

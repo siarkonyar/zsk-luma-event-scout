@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "api_id": "evt-H3",
+      "event": {
+        "api_id": "evt-H3",
+        "name": "Host Pop-up Elsewhere",
+        "start_at": "2026-11-14T10:00:00.000Z",
+        "end_at": null,
+        "timezone": "Europe/Berlin",
+        "url": "https://luma.com/ijkl9012",
+        "location_type": "unknown"
+      },
+      "calendar": {"api_id": "cal-H", "name": "Test Hosts Calendar", "slug": "test-hosts"},
+      "ticket_info": {"is_free": false, "is_sold_out": false}
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}

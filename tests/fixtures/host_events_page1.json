@@ -1,0 +1,40 @@
+{
+  "entries": [
+    {
+      "api_id": "evt-H1",
+      "event": {
+        "api_id": "evt-H1",
+        "name": "Host Meetup Testville",
+        "start_at": "2026-11-12T18:00:00.000Z",
+        "end_at": "2026-11-12T21:00:00.000Z",
+        "timezone": "Europe/London",
+        "url": "abcd1234",
+        "location_type": "offline",
+        "coordinate": {"latitude": 51.52, "longitude": -0.08},
+        "geo_address_info": {"city": "Testville", "country": "Testland"}
+      },
+      "calendar": {"api_id": "cal-H", "name": "Test Hosts Calendar", "slug": "test-hosts"},
+      "ticket_info": {"is_free": true, "is_sold_out": true},
+      "guest_info": null
+    },
+    {
+      "api_id": "evt-H2",
+      "event": {
+        "api_id": "evt-H2",
+        "name": "Host Webinar",
+        "start_at": "2026-11-13T17:00:00.000Z",
+        "end_at": "2026-11-13T18:00:00.000Z",
+        "timezone": "Europe/London",
+        "url": "efgh5678",
+        "location_type": "zoom",
+        "coordinate": null,
+        "geo_address_info": null
+      },
+      "calendar": {"api_id": "cal-H", "name": "Test Hosts Calendar", "slug": "test-hosts"},
+      "ticket_info": {"is_free": true, "is_sold_out": false},
+      "guest_info": null
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "c2"
+}
