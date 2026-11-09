@@ -180,5 +180,34 @@ def test_summary_line(base, calendar, host, profile):
     assert st.summary_line(full) == expected
 
 
+def test_with_user_keywords_replaces_and_keeps_the_rest(base, calendar, profile):
+    full = st.with_profile(st.with_calendar(base, calendar), profile, ["evt-a"], NOW)
+    snapshot = copy.deepcopy(full)
+    updated = st.with_user_keywords(full, ["design", "music", "climate"])
+    assert full == snapshot
+    assert updated["user_keywords"] == ["design", "music", "climate"]
+    assert updated["profile"] == full["profile"]
+    assert updated["followed_calendars"] == full["followed_calendars"]
+
+
+def test_with_user_keywords_rejects_generated_collision(base, profile):
+    full = st.with_profile(base, profile, [], NOW)
+    with pytest.raises(StateError, match="generated"):
+        st.with_user_keywords(full, ["Tech", "music", "climate"])
+
+
+def test_with_user_keywords_rejects_wrong_count(base):
+    with pytest.raises(StateError):
+        st.with_user_keywords(base, ["one", "two"])
+
+
+def test_with_location_validates_and_keeps_the_rest(base, location):
+    moved = st.with_location(base, {**location, "name": "Otherville"})
+    assert moved["location"]["name"] == "Otherville"
+    assert moved["user_keywords"] == base["user_keywords"]
+    with pytest.raises(StateError):
+        st.with_location(base, {**location, "timezone": ""})
+
+
 def test_normalize_keyword():
     assert st.normalize_keyword("  Machine   LEARNING ") == "machine learning"

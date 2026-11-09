@@ -64,6 +64,19 @@ def new_state(location: dict, user_keywords: list) -> dict:
     }
 
 
+def with_user_keywords(state: dict, keywords: list) -> dict:
+    cleaned = _clean_keywords(keywords, USER_KEYWORD_COUNT, "user keywords")
+    generated = {normalize_keyword(k) for k in (state.get("profile") or {}).get("generated_keywords", [])}
+    clashes = [k for k in cleaned if normalize_keyword(k) in generated]
+    if clashes:
+        raise StateError(f"user keywords repeat the generated keywords {clashes}; regenerate the profile")
+    return {**state, "user_keywords": cleaned}
+
+
+def with_location(state: dict, location: dict) -> dict:
+    return {**state, "location": _validate_location(location)}
+
+
 def load_state(path: Path) -> Optional[dict]:
     if not path.exists():
         return None
