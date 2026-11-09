@@ -58,6 +58,30 @@ def test_agents_use_haiku_and_allowed_tools_only():
     assert names == {"luma-day-searcher", "luma-history-reader"}
 
 
+SKILL = ROOT / "skills" / "luma-event-scout" / "SKILL.md"
+
+
+def test_skill_frontmatter_and_sections():
+    fields, body = frontmatter(SKILL)
+    assert fields["name"] == "luma-event-scout"
+    assert "Luma" in fields["description"]
+    headings = ["## Rules", "## Paths", "## First run", "## Normal run", "## Ranking and output",
+                "## Changing settings", "## Errors"]
+    positions = [body.index(h) for h in headings]
+    assert positions == sorted(positions)
+    for needle in ("scout.py", "luma-event-scout:luma-day-searcher",
+                   "luma-event-scout:luma-history-reader", "send_feedback"):
+        assert needle in body
+    assert len(SKILL.read_text().splitlines()) < 200
+
+
+def test_skill_uses_every_cli_command():
+    body = SKILL.read_text().lower()
+    for command in ("show", "init", "set-keywords", "set-location", "calendars add", "hosts add",
+                    "prepare-run", "windows", "new-events", "save-profile", "feeds", "merge"):
+        assert f"scout.py {command}" in body or f"scout {command}" in body, command
+
+
 def test_no_forbidden_luma_tool_named_anywhere():
     files = [*agent_files(), *ROOT.glob("skills/**/SKILL.md")]
     assert files
