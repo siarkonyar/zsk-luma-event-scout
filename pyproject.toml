@@ -1,0 +1,16 @@
+[project]
+name = "luma-event-scout"
+version = "0.1.0"
+description = "Claude Code skill that recommends upcoming Luma events that fit you."
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+pythonpath = ["skills/luma-event-scout/scripts"]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["scout_lib"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
