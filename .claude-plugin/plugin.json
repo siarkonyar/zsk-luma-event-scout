@@ -1,0 +1,11 @@
+{
+  "name": "luma-event-scout",
+  "version": "0.1.0",
+  "description": "Finds upcoming Luma events in your city that fit you, from your Luma history, your keywords, and the calendars and hosts you follow.",
+  "author": {
+    "name": "siarkonyar"
+  },
+  "homepage": "https://github.com/siarkonyar/zsk-luma-event-scout",
+  "repository": "https://github.com/siarkonyar/zsk-luma-event-scout",
+  "keywords": ["luma", "events", "meetups", "calendar", "recommendations"]
+}

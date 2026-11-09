@@ -1,0 +1,14 @@
+{
+  "name": "zsk-luma-event-scout",
+  "owner": {
+    "name": "siarkonyar"
+  },
+  "plugins": [
+    {
+      "name": "luma-event-scout",
+      "source": "./",
+      "description": "Finds upcoming Luma events in your city that fit you.",
+      "version": "0.1.0"
+    }
+  ]
+}
