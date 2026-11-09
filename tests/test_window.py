@@ -66,6 +66,13 @@ def test_span_and_in_span_edges():
     assert not w.in_span("2026-11-08T23:59:59Z", bounds)
 
 
+def test_local_day_time_in_city_timezone():
+    assert w.local_day_time("2026-11-11T18:00:00Z", "Europe/London") == ("Wed 11 Nov", "18:00")
+    assert w.local_day_time("2026-11-11T18:00:00Z", "Europe/Berlin") == ("Wed 11 Nov", "19:00")
+    assert w.local_day_time("2026-11-11T23:30:00Z", "Asia/Tokyo") == ("Thu 12 Nov", "08:30")
+    assert w.local_day_time("2026-07-01T17:00:00Z", "Europe/London") == ("Wed 1 Jul", "18:00")
+
+
 def test_in_bounds_inside_and_outside(location):
     box = location["bounds"]
     assert w.in_bounds(51.5, -0.1, box)

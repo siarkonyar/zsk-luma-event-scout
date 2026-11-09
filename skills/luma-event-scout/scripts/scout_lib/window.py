@@ -7,6 +7,9 @@ from zoneinfo import ZoneInfo
 
 Span = Tuple[datetime, datetime]
 
+_WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
 
 def parse_iso(value: str) -> datetime:
     """Parse an ISO 8601 datetime into an aware UTC datetime. Naive values are UTC."""
@@ -55,6 +58,13 @@ def span(windows: list) -> Span:
 def in_span(start_at: str, bounds: Span) -> bool:
     start, end = bounds
     return start <= parse_iso(start_at) < end
+
+
+def local_day_time(start_at: str, tz_name: str) -> Tuple[str, str]:
+    """("Wed 11 Nov", "18:00") in the given timezone, independent of the machine's locale."""
+    moment = parse_iso(start_at).astimezone(ZoneInfo(tz_name))
+    day = f"{_WEEKDAYS[moment.weekday()]} {moment.day} {_MONTHS[moment.month - 1]}"
+    return day, moment.strftime("%H:%M")
 
 
 def in_bounds(lat: float, lng: float, box: dict) -> bool:

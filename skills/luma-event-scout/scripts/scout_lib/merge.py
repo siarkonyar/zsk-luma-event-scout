@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Optional, Tuple
 
 from .constants import DEFAULT_EVENT_DURATION, REGISTERED_STATUSES
-from .window import parse_iso
+from .window import local_day_time, parse_iso
 
 _SOURCE_PRIORITY = ("host:", "calendar:", "discovery:")
 _FILLABLE = ("registered", "sold_out", "online", "end_at")
@@ -121,7 +121,15 @@ def _dedupe(records: list) -> Tuple[dict, int]:
     return by_id, duplicates
 
 
-def merge_candidates(discovery: list, feeds: dict, registered: list) -> dict:
+def _local_fields(record: dict, tz_name: Optional[str]) -> dict:
+    if not tz_name:
+        return {}
+    day, clock = local_day_time(record["start_at"], tz_name)
+    return {"local_day": day, "local_time": clock}
+
+
+def merge_candidates(discovery: list, feeds: dict, registered: list, tz_name: Optional[str] = None) -> dict:
+    """With `tz_name`, each candidate also gets `local_day` / `local_time` in that timezone."""
     failures: list = []
     by_id, duplicates = _dedupe(_gather(discovery, feeds, failures))
     usable = _usable_registered(registered)
@@ -132,7 +140,8 @@ def merge_candidates(discovery: list, feeds: dict, registered: list) -> dict:
         if status in REGISTERED_STATUSES:
             dropped += 1
             continue
-        candidates.append({**record, "registered": status, "clash_with": find_clashes(record, usable)})
+        clashes = find_clashes(record, usable)
+        candidates.append({**record, "registered": status, "clash_with": clashes, **_local_fields(record, tz_name)})
     candidates.sort(key=lambda c: (parse_iso(c["start_at"]), c["name"]))
     return {
         "candidates": candidates,

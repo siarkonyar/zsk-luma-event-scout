@@ -239,13 +239,15 @@ def test_feeds_and_merge_end_to_end(cli):
     registered = cli.write("reg.json", history(["evt-A1"], period="future"))
     out_path = str(cli.tmp / "candidates.json")
     code, merged, _ = cli("merge", "--discovery", discovery, "--feeds", feeds_out,
-                          "--registered", registered, "--out", out_path)
+                          "--registered", registered, "--timezone", "Europe/London", "--out", out_path)
     assert code == 0
     assert merged["counts"] == {"candidates": 7, "dropped_registered": 1, "duplicates": 0}
     candidates = json.loads(Path(out_path).read_text())["candidates"]
     assert "evt-A1" not in {c["api_id"] for c in candidates}
     starts = [c["start_at"] for c in candidates]
     assert starts == sorted(starts)
+    first = candidates[0]
+    assert (first["api_id"], first["local_day"], first["local_time"]) == ("evt-X", "Tue 10 Nov", "18:00")
 
 
 def test_merge_tolerates_missing_and_bad_files(cli):

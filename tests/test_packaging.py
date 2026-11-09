@@ -75,9 +75,23 @@ def test_skill_frontmatter_and_sections():
     assert len(SKILL.read_text().splitlines()) < 200
 
 
+def test_skill_covers_resume_profile_failures_and_local_times():
+    body = SKILL.read_text()
+    for needle in (
+        "`has_profile` is `false`",  # interrupted setup resumes instead of a 200-event refresh
+        "`profile`",                 # ranking and refresh use the stored profile from show
+        "local_day", "local_time",   # times come from merge, not mental arithmetic
+        "--timezone",
+        "incomplete",                # history reader partial results are surfaced
+        "(search failed)",           # a searcher that wrote nothing is named in Skipped
+        "names of people",           # profile never stores host or guest names
+    ):
+        assert needle in body, needle
+
+
 def test_skill_uses_every_cli_command():
     body = SKILL.read_text().lower()
-    for command in ("show", "init", "set-keywords", "set-location", "calendars add", "hosts add",
+    for command in ("show", "init", "set-keywords", "set-generated", "set-location", "calendars add", "hosts add",
                     "prepare-run", "windows", "new-events", "save-profile", "feeds", "merge"):
         assert f"scout.py {command}" in body or f"scout {command}" in body, command
 

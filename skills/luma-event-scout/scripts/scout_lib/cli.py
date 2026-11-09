@@ -235,7 +235,8 @@ def cmd_merge(ctx: Context) -> int:
             discovery.append(data)
     feeds = _read_optional(args.feeds, "feeds", failures) or {}
     registered = _events_of(_read_optional(args.registered, "registered events (clash check skipped)", failures))
-    merged = merge_candidates(discovery, feeds, registered)
+    tz_name = _check_timezone(args.timezone) if args.timezone else None
+    merged = merge_candidates(discovery, feeds, registered, tz_name)
     result = {**merged, "failures": [*failures, *merged["failures"]]}
     _write_json(args.out, result)
     return _emit({"counts": result["counts"], "failures": result["failures"]})
@@ -313,6 +314,7 @@ def _add_run_commands(sub) -> None:
     merge.add_argument("--discovery", nargs="+", required=True)
     for flag in ("--feeds", "--registered", "--out"):
         merge.add_argument(flag, required=True)
+    merge.add_argument("--timezone", help="add local_day / local_time in this timezone")
 
 
 def build_parser() -> argparse.ArgumentParser:

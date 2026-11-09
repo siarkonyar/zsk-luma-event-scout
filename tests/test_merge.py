@@ -140,6 +140,14 @@ def test_merge_ignores_malformed_feeds():
     assert "feeds: skipped 1 malformed record" in result["failures"]
 
 
+def test_merge_adds_local_day_and_time_when_given_a_timezone():
+    d = disc([rec("evt-1", "2026-11-11T23:30:00Z", None)])
+    result = merge_candidates([d], NO_FEEDS, [], tz_name="Asia/Tokyo")
+    candidate = result["candidates"][0]
+    assert (candidate["local_day"], candidate["local_time"]) == ("Thu 12 Nov", "08:30")
+    assert "local_day" not in merge_candidates([d], NO_FEEDS, [])["candidates"][0]
+
+
 def test_inputs_are_not_mutated():
     event = rec("evt-c", "2026-11-10T18:00:00Z", "2026-11-10T21:00:00Z")
     d = disc([event])
