@@ -69,7 +69,21 @@ def _write_json(path: str, payload) -> None:
 
 
 def _events_of(data) -> list:
-    return data.get("events", []) if isinstance(data, dict) else data
+    if isinstance(data, dict):
+        events = data.get("events", [])
+        return events if isinstance(events, list) else []
+    return data if isinstance(data, list) else []
+
+
+def _read_optional(path: str, label: str, failures: list):
+    """Read a run file written by a sub-agent; a missing or broken one becomes a named failure."""
+    try:
+        return _read_json(path)
+    except FileNotFoundError:
+        failures.append(f"{label}: missing")
+    except (OSError, ValueError) as exc:
+        failures.append(f"{label}: {exc}")
+    return None
 
 
 def _check_timezone(name: str) -> str:
@@ -105,6 +119,7 @@ def _show_payload(state: dict) -> dict:
         "hosts": state["followed_hosts"],
         "has_profile": bool(state.get("profile")),
         "last_profiled_at": profile.get("last_profiled_at"),
+        "profile": state.get("profile"),
     }
 
 
@@ -125,6 +140,10 @@ def cmd_init(ctx: Context) -> int:
 
 def cmd_set_keywords(ctx: Context) -> int:
     return _save_and_show(ctx, st.with_user_keywords(ctx.load(), ctx.args.keywords))
+
+
+def cmd_set_generated(ctx: Context) -> int:
+    return _save_and_show(ctx, st.with_generated_keywords(ctx.load(), ctx.args.keywords))
 
 
 def cmd_set_location(ctx: Context) -> int:
@@ -208,10 +227,17 @@ def cmd_feeds(ctx: Context) -> int:
 
 
 def cmd_merge(ctx: Context) -> int:
-    discovery = [_read_json(path) for path in ctx.args.discovery]
-    registered = _events_of(_read_json(ctx.args.registered))
-    result = merge_candidates(discovery, _read_json(ctx.args.feeds), registered)
-    _write_json(ctx.args.out, result)
+    args, failures = ctx.args, []
+    discovery = []
+    for path in args.discovery:
+        data = _read_optional(path, f"discovery file {Path(path).name}", failures)
+        if data is not None:
+            discovery.append(data)
+    feeds = _read_optional(args.feeds, "feeds", failures) or {}
+    registered = _events_of(_read_optional(args.registered, "registered events (clash check skipped)", failures))
+    merged = merge_candidates(discovery, feeds, registered)
+    result = {**merged, "failures": [*failures, *merged["failures"]]}
+    _write_json(args.out, result)
     return _emit({"counts": result["counts"], "failures": result["failures"]})
 
 
@@ -219,6 +245,7 @@ HANDLERS = {
     "show": cmd_show,
     "init": cmd_init,
     "set-keywords": cmd_set_keywords,
+    "set-generated": cmd_set_generated,
     "set-location": cmd_set_location,
     "calendars": cmd_calendars,
     "hosts": cmd_hosts,
@@ -246,6 +273,8 @@ def _add_setup_commands(sub) -> None:
     init.add_argument("--force", action="store_true", help="replace an existing state file")
     keywords = sub.add_parser("set-keywords", help="replace the user's 3 keywords")
     keywords.add_argument("keywords", nargs=3, metavar="KEYWORD")
+    generated = sub.add_parser("set-generated", help="replace the 2 generated keywords, keeping the profile")
+    generated.add_argument("keywords", nargs=2, metavar="KEYWORD")
     _add_location_args(sub.add_parser("set-location", help="change the saved city"))
     profile = sub.add_parser("save-profile", help="store an updated profile")
     profile.add_argument("profile")

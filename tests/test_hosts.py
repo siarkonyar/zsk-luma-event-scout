@@ -81,6 +81,24 @@ def test_fetch_hosted_events_stops_when_page_repeats():
     assert len(opener.requests) == 2
 
 
+def test_host_entry_tolerates_wrong_types():
+    entry = {
+        "api_id": "evt-W",
+        "event": {"api_id": "evt-W", "name": "W", "start_at": "2026-11-12T18:00:00Z",
+                  "coordinate": [1, 2], "geo_address_info": "Somewhere", "location_type": "offline"},
+        "calendar": "Cal",
+        "ticket_info": "?",
+    }
+    event = host_entry_to_event(entry)
+    assert (event["lat"], event["lng"], event["city"]) == (None, None, None)
+    assert event["calendar"] == "" and event["sold_out"] is None
+
+
+def test_host_entry_with_non_object_event_raises_value_error():
+    with pytest.raises(ValueError):
+        host_entry_to_event({"api_id": "evt-S", "event": "oops"})
+
+
 def test_host_entry_to_event():
     entries = json.loads(PAGE1)["entries"] + json.loads(PAGE2)["entries"]
     offline, zoom, unknown = (host_entry_to_event(e) for e in entries)

@@ -209,5 +209,35 @@ def test_with_location_validates_and_keeps_the_rest(base, location):
         st.with_location(base, {**location, "timezone": ""})
 
 
+def test_with_profile_keeps_only_known_fields(base, profile):
+    noisy = {
+        **profile,
+        "top_hosts": ["A Person"],
+        "home_address": "1 Road",
+        "interests": [{"tag": "agents", "weight": 0.8, "evidence_count": 6, "host": "Someone"}],
+    }
+    stored = st.with_profile(base, noisy, [], NOW)["profile"]
+    assert set(stored) == {"summary", "interests", "generated_keywords", "built_from_events", "last_profiled_at"}
+    assert stored["interests"] == [{"tag": "agents", "weight": 0.8, "evidence_count": 6}]
+
+
+def test_with_generated_keywords_replaces_only_them(base, profile):
+    full = st.with_profile(base, profile, ["evt-a"], NOW)
+    updated = st.with_generated_keywords(full, ["culture", "science"])
+    assert updated["profile"]["generated_keywords"] == ["culture", "science"]
+    assert updated["profile"]["summary"] == full["profile"]["summary"]
+    assert updated["profile"]["last_profiled_at"] == NOW
+    assert updated["seen_event_ids"] == ["evt-a"]
+    assert full["profile"]["generated_keywords"] == ["tech", "startups"]
+
+
+def test_with_generated_keywords_needs_profile_and_distinct_words(base, profile):
+    with pytest.raises(StateError, match="profile"):
+        st.with_generated_keywords(base, ["culture", "science"])
+    full = st.with_profile(base, profile, [], NOW)
+    with pytest.raises(StateError):
+        st.with_generated_keywords(full, ["AI", "science"])
+
+
 def test_normalize_keyword():
     assert st.normalize_keyword("  Machine   LEARNING ") == "machine learning"

@@ -171,18 +171,40 @@ def _validate_interests(interests: list) -> None:
             raise StateError(f"interest {item.get('tag')!r}: evidence_count must be >= 0")
 
 
-def _validate_profile(state: dict, profile: dict) -> dict:
-    if not isinstance(profile, dict) or not str(profile.get("summary", "")).strip():
-        raise StateError("profile.summary is required")
-    _validate_interests(profile.get("interests"))
-    generated = _clean_keywords(
-        profile.get("generated_keywords"), GENERATED_KEYWORD_COUNT, "generated keywords"
-    )
+def _check_generated(state: dict, keywords: list) -> list:
+    generated = _clean_keywords(keywords, GENERATED_KEYWORD_COUNT, "generated keywords")
     user = {normalize_keyword(k) for k in state["user_keywords"]}
     clashes = [k for k in generated if normalize_keyword(k) in user]
     if clashes:
         raise StateError(f"generated keywords repeat the user's keywords: {clashes}")
-    return {**copy.deepcopy(profile), "generated_keywords": generated}
+    return generated
+
+
+def _validate_profile(state: dict, profile: dict) -> dict:
+    """Return a profile with only the known fields, so nothing else reaches the state file."""
+    if not isinstance(profile, dict) or not str(profile.get("summary", "")).strip():
+        raise StateError("profile.summary is required")
+    _validate_interests(profile.get("interests"))
+    built = profile.get("built_from_events", 0)
+    if not isinstance(built, int) or isinstance(built, bool) or built < 0:
+        raise StateError("profile.built_from_events must be a whole number >= 0")
+    interests = [
+        {"tag": str(i["tag"]).strip(), "weight": i["weight"], "evidence_count": i.get("evidence_count", 0)}
+        for i in profile["interests"]
+    ]
+    return {
+        "summary": str(profile["summary"]).strip(),
+        "interests": interests,
+        "generated_keywords": _check_generated(state, profile.get("generated_keywords")),
+        "built_from_events": built,
+    }
+
+
+def with_generated_keywords(state: dict, keywords: list) -> dict:
+    profile = state.get("profile")
+    if not profile:
+        raise StateError("there is no profile yet; build one before changing generated keywords")
+    return {**state, "profile": {**profile, "generated_keywords": _check_generated(state, keywords)}}
 
 
 def with_profile(state: dict, profile: dict, seen_ids: list, now_iso: str) -> dict:

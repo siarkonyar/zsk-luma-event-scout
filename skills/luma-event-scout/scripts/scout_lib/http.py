@@ -1,6 +1,7 @@
 """A small, polite HTTP client: one delay between calls, retries on transient errors."""
 from __future__ import annotations
 
+import http.client
 import json as _json
 import time
 import urllib.error
@@ -57,8 +58,8 @@ class Fetcher:
                 if not _is_retryable(exc.code):
                     raise FetchError(f"{exc.code} for {url}") from exc
                 last_error = str(exc.code)
-            except OSError as exc:
-                last_error = f"network error ({getattr(exc, 'reason', exc)})"
+            except (OSError, http.client.HTTPException) as exc:
+                last_error = f"network error ({getattr(exc, 'reason', None) or type(exc).__name__})"
             if attempt < self._retries:
                 self._sleep(2 ** attempt)
         raise FetchError(f"{last_error} for {url}")

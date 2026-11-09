@@ -113,6 +113,29 @@ def test_collect_feeds_records_host_failure(location, keywords, host, windows):
     assert result["events"] == []
 
 
+def test_collect_feeds_survives_malformed_host_entries(location, keywords, host, windows):
+    state = st.with_host(st.new_state(location, keywords), host)
+    good = json.loads(fixture_text("host_events_page1.json"))["entries"][1]
+    weird = {"api_id": "evt-W", "event": {"api_id": "evt-W", "name": "W",
+             "start_at": "2026-11-12T18:00:00Z", "coordinate": [1, 2],
+             "geo_address_info": "Somewhere", "location_type": "zoom"}, "calendar": "Cal"}
+    page = {"entries": [{"api_id": "evt-S", "event": "oops"}, weird, "junk", good], "has_more": False}
+    opener = RoutingOpener({HOST_EVENTS_PREFIX: page})
+    result = collect_feeds(state, windows, Fetcher(opener=opener, sleep=RecordingSleep()))
+    assert {e["api_id"] for e in result["events"]} == {"evt-W", "evt-H2"}
+    assert result["failures"] == []
+
+
+def test_collect_feeds_records_unexpected_errors_per_source(followed, windows):
+    def explode(request):
+        raise RuntimeError("surprise")
+
+    opener = RoutingOpener({ICS_PREFIX: fixture_text("calendar.ics"), HOST_EVENTS_PREFIX: explode})
+    result = collect_feeds(followed, windows, Fetcher(opener=opener, sleep=RecordingSleep()))
+    assert result["failures"] == [{"source": "host:test_hosts", "error": "RuntimeError: surprise"}]
+    assert {e["source"] for e in result["events"]} == {"calendar:test-cal"}
+
+
 def test_collect_feeds_skips_host_entry_without_start(location, keywords, host, windows):
     state = st.with_host(st.new_state(location, keywords), host)
     broken = {"entries": [{"api_id": "evt-bad", "event": {"api_id": "evt-bad"}}], "has_more": False}

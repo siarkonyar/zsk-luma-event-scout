@@ -52,8 +52,13 @@ def resolve_host(value: str, fetcher: Fetcher, today: str) -> dict:
     }
 
 
+def _as_dict(value) -> dict:
+    """Public endpoints can change shape; treat anything that isn't an object as empty."""
+    return value if isinstance(value, dict) else {}
+
+
 def _entry_id(entry: dict) -> Optional[str]:
-    return (entry.get("event") or {}).get("api_id") or entry.get("api_id")
+    return _as_dict(entry.get("event")).get("api_id") or entry.get("api_id")
 
 
 def fetch_hosted_events(user_id: str, fetcher: Fetcher) -> list:
@@ -63,7 +68,8 @@ def fetch_hosted_events(user_id: str, fetcher: Fetcher) -> list:
     seen: set = set()
     for _ in range(HOST_MAX_PAGES):
         page = fetcher.json(HOST_EVENTS_URL, params)
-        fresh = [e for e in page.get("entries") or [] if isinstance(e, dict) and _entry_id(e) not in seen]
+        listed = page.get("entries") if isinstance(page.get("entries"), list) else []
+        fresh = [e for e in listed if isinstance(e, dict) and _entry_id(e) not in seen]
         if not fresh:
             break
         entries.extend(fresh)
@@ -94,22 +100,27 @@ def _optional_time(value) -> Optional[str]:
 
 
 def host_entry_to_event(entry: dict) -> dict:
-    event = entry.get("event") or {}
-    coordinate = event.get("coordinate") or {}
+    """Raises ValueError when the entry has no usable ID or start time."""
+    event = _as_dict(entry.get("event"))
+    coordinate = _as_dict(event.get("coordinate"))
     lat, lng = coordinate.get("latitude"), coordinate.get("longitude")
     has_point = isinstance(lat, (int, float)) and isinstance(lng, (int, float))
     api_id = _entry_id(entry)
+    if not isinstance(api_id, str) or not api_id:
+        raise ValueError("host entry without an event ID")
+    city = _as_dict(event.get("geo_address_info")).get("city")
+    sold_out = _as_dict(entry.get("ticket_info")).get("is_sold_out")
     return {
         "api_id": api_id,
-        "name": event.get("name") or "",
+        "name": str(event.get("name") or ""),
         "start_at": to_iso_z(parse_iso(event.get("start_at") or entry.get("start_at"))),
         "end_at": _optional_time(event.get("end_at")),
-        "url": _event_url(event.get("url") or "", api_id),
-        "calendar": (entry.get("calendar") or {}).get("name") or "",
+        "url": _event_url(str(event.get("url") or ""), api_id),
+        "calendar": str(_as_dict(entry.get("calendar")).get("name") or ""),
         "lat": lat if has_point else None,
         "lng": lng if has_point else None,
-        "city": (event.get("geo_address_info") or {}).get("city"),
+        "city": city if isinstance(city, str) else None,
         "location": None,
         "online": online_from_location_type(event.get("location_type")),
-        "sold_out": (entry.get("ticket_info") or {}).get("is_sold_out"),
+        "sold_out": sold_out if isinstance(sold_out, bool) else None,
     }

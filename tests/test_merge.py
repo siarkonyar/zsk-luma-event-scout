@@ -114,6 +114,32 @@ def test_sorted_and_failures_listed():
     assert result["counts"]["candidates"] == 3
 
 
+def test_merge_skips_malformed_records_and_files():
+    good = rec("evt-1", "2026-11-10T18:00:00Z", None)
+    nameless = {**rec("evt-2", "2026-11-10T18:00:00Z", None), "name": None}
+    no_start = {k: v for k, v in rec("evt-3", "x", None).items() if k != "start_at"}
+    bad_time = rec("evt-4", "not-a-time", None)
+    no_source = {k: v for k, v in rec("evt-5", "2026-11-10T19:00:00Z", None).items() if k != "source"}
+    files = [disc([good, nameless, no_start, bad_time, "junk", no_source]), ["not", "a", "result"]]
+    registered = ["junk", {"api_id": "evt-r"}, reg("evt-ok", "2026-11-10T18:30:00Z", None)]
+    result = merge_candidates(files, NO_FEEDS, registered)
+    assert [c["api_id"] for c in result["candidates"]] == ["evt-2", "evt-1", "evt-5"]
+    by_id = {c["api_id"]: c for c in result["candidates"]}
+    assert by_id["evt-2"]["name"] == ""
+    assert by_id["evt-5"]["source"] == "discovery:ai"
+    assert by_id["evt-1"]["clash_with"] == [{"api_id": "evt-ok", "name": "evt-ok"}]
+    assert "discovery:ai: skipped 3 malformed records" in result["failures"]
+    assert "discovery result 2: not a discovery result" in result["failures"]
+
+
+def test_merge_ignores_malformed_feeds():
+    feeds = {"events": ["junk", rec("evt-f", "2026-11-10T10:00:00Z", None, source="calendar:c")],
+             "failures": ["junk"]}
+    result = merge_candidates([], feeds, [])
+    assert [c["api_id"] for c in result["candidates"]] == ["evt-f"]
+    assert "feeds: skipped 1 malformed record" in result["failures"]
+
+
 def test_inputs_are_not_mutated():
     event = rec("evt-c", "2026-11-10T18:00:00Z", "2026-11-10T21:00:00Z")
     d = disc([event])

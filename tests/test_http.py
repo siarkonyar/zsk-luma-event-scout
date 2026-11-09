@@ -35,6 +35,14 @@ def test_fetcher_retries_429_and_url_errors():
     assert sleep.calls == [1, 2]
 
 
+def test_fetcher_retries_incomplete_read():
+    import http.client
+
+    fetcher, _, sleep = make([http.client.IncompleteRead(b"partial"), "ok"])
+    assert fetcher.text("https://api.example.test/x") == "ok"
+    assert sleep.calls == [1]
+
+
 def test_fetcher_raises_on_404_without_retry():
     fetcher, opener, sleep = make([404])
     with pytest.raises(FetchError, match="404"):

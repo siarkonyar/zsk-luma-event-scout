@@ -116,6 +116,33 @@ def with_profile(cli):
                "--history", cli.write("h.json", history(["evt-1"])))
 
 
+def test_show_includes_stored_profile(cli):
+    with_profile(cli)
+    out = cli("show")[1]
+    assert out["profile"]["summary"] == "Likes builder meetups."
+    assert out["profile"]["interests"] == PROFILE["interests"]
+    assert out["profile"]["built_from_events"] == 5
+
+
+def test_show_profile_is_null_before_setup_finishes(cli):
+    cli(*INIT)
+    assert cli("show")[1]["profile"] is None
+
+
+def test_set_generated_keeps_profile(cli):
+    with_profile(cli)
+    code, out, _ = cli("set-generated", "culture", "science")
+    assert code == 0
+    assert out["keywords"] == ["ai", "founders", "hackathon", "culture", "science"]
+    assert out["profile"]["summary"] == "Likes builder meetups."
+
+
+def test_set_generated_rejects_user_keyword(cli):
+    with_profile(cli)
+    code, _, err = cli("set-generated", "AI", "science")
+    assert code == 1 and "repeat" in err
+
+
 def test_set_keywords_keeps_profile_and_calendars(cli):
     with_profile(cli)
     code, out, _ = cli("set-keywords", "design", "music", "climate")
@@ -219,6 +246,26 @@ def test_feeds_and_merge_end_to_end(cli):
     assert "evt-A1" not in {c["api_id"] for c in candidates}
     starts = [c["start_at"] for c in candidates]
     assert starts == sorted(starts)
+
+
+def test_merge_tolerates_missing_and_bad_files(cli):
+    discovery = cli.write("d1.json", {"keyword": "ai", "failed_days": [], "events": [{
+        "api_id": "evt-X", "name": "Discovered", "start_at": "2026-11-10T18:00:00Z",
+        "end_at": None, "url": "https://luma.com/x", "calendar": "Other", "source": "discovery:ai",
+        "online": False, "sold_out": False, "registered": None, "clash_with": []}]})
+    bad_feeds = cli.tmp / "feeds.json"
+    bad_feeds.write_text("{not json")
+    out_path = cli.tmp / "candidates.json"
+    code, merged, _ = cli("merge", "--discovery", discovery, str(cli.tmp / "discovery-2.json"),
+                          "--feeds", str(bad_feeds), "--registered", str(cli.tmp / "missing.json"),
+                          "--out", str(out_path))
+    assert code == 0
+    assert merged["counts"]["candidates"] == 1
+    failures = " | ".join(merged["failures"])
+    assert "discovery file discovery-2.json: missing" in failures
+    assert "feeds:" in failures
+    assert "registered events (clash check skipped): missing" in failures
+    assert json.loads(out_path.read_text())["failures"] == merged["failures"]
 
 
 def test_feeds_city_override_does_not_change_state(cli):

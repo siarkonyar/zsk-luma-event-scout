@@ -91,20 +91,27 @@ def _host_events(host: dict, fetcher: Fetcher, bounds: Span, location: dict) -> 
     return kept
 
 
+def _describe(exc: Exception) -> str:
+    if isinstance(exc, (FetchError, ValueError)):
+        return str(exc)
+    return f"{type(exc).__name__}: {exc}"
+
+
 def collect_feeds(state: dict, windows: list, fetcher: Fetcher) -> dict:
+    """One failing or malformed source is recorded in `failures`; the others still run."""
     bounds, location = span(windows), state["location"]
     events, failures, external = [], [], 0
     for calendar in state["followed_calendars"]:
         try:
             kept, skipped = _calendar_events(calendar, fetcher, bounds, location)
-        except (FetchError, ValueError) as exc:
-            failures.append({"source": f"calendar:{calendar['slug']}", "error": str(exc)})
+        except Exception as exc:  # recorded per source, never swallowed
+            failures.append({"source": f"calendar:{calendar['slug']}", "error": _describe(exc)})
             continue
         events.extend(kept)
         external += skipped
     for host in state["followed_hosts"]:
         try:
             events.extend(_host_events(host, fetcher, bounds, location))
-        except (FetchError, ValueError) as exc:
-            failures.append({"source": f"host:{host['username']}", "error": str(exc)})
+        except Exception as exc:  # recorded per source, never swallowed
+            failures.append({"source": f"host:{host['username']}", "error": _describe(exc)})
     return {"events": events, "failures": failures, "skipped_external": external}
